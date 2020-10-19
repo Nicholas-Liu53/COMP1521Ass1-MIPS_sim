@@ -39,6 +39,18 @@ void mips_ori_function(int *var, int t, int s, int16_t i);
 void mips_lui_function(int *var, int t, int16_t i);
 void syscall_function(int *var, int *exitPointer);
 
+int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer);
+void mips_add_function_dashR(int *var, int d, int s, int t);
+void mips_sub_function_dashR(int *var, int d, int s, int t);
+void mips_slt_function_dashR(int *var, int d, int s, int t);
+void mips_mul_function_dashR(int *var, int d, int s, int t);
+int mips_beq_function_dashR(int *var, int pc, int s, int t, int16_t i);
+int mips_bne_function_dashR(int *var, int pc, int s, int t, int16_t i);
+void mips_addi_function_dashR(int *var, int t, int s, int16_t i);
+void mips_ori_function_dashR(int *var, int t, int s, int16_t i);
+void mips_lui_function_dashR(int *var, int t, int16_t i);
+void syscall_function_dashR(int *var, int *exitPointer);
+
 // YOU SHOULD NOT NEED TO CHANGE MAIN
 
 int main(int argc, char *argv[]) {
@@ -82,14 +94,17 @@ void execute_instructions(int n_instructions,
         if (trace_mode) {
             printf("%d: 0x%08X ", pc, instructions[pc]);
             pc = interpret_hex(instructions[pc], var, pc, exitPointer);
-        }
-        if (exit) {
-            return;
+        } else {
+            pc = interpret_hex_dashR(instructions[pc], var, pc, exitPointer);
         }
         if (pc < 0) {
             printf("Illegal branch to address before instructions: PC = %d\n", pc + 1);
             return;
         }
+        if (exit) {
+            return;
+        }
+        
         var[0] = 0; // $0 is hard-wired to 0
         pc++;
     }
@@ -98,6 +113,9 @@ void execute_instructions(int n_instructions,
 
 
 // ADD YOUR FUNCTIONS HERE
+
+//* This first set of functions are specifically when
+//* trace_mode is on
 
 // Function to interpret the hex command
 //! NOTE: instr refers to instructions[n_instructions]
@@ -267,6 +285,150 @@ void syscall_function(int *var, int *exitPointer) {
         printf("\n");
     } else {
         printf(">>> syscall %d\n", var[2]);
+        printf("Unknown system call: %d\n", var[2]);
+        *exitPointer = 1;
+    }
+}
+
+//* This next set of functions are specifically when
+//* trace_mode is off
+
+int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer) {
+    if (!(instr >> 26) && ((instr & 0x7FF) == 0x20)) {
+        // If the command is to add
+        int d = (instr >> 11) & 0x1F;
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+
+        mips_add_function_dashR(var, d, s, t);
+          
+    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x22)) {
+        // If the command is to sub
+        int d = (instr >> 11) & 0x1F;
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+
+        mips_sub_function_dashR(var, d, s, t);
+        
+    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x2A)) {
+        // If the command is to slt
+        int d = (instr >> 11) & 0x1F;
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+
+        mips_slt_function_dashR(var, d, s, t);
+        
+    } else if (((instr >> 26) & 0x3F) == 0x1C && ((instr & 0x7FF) == 2)) {
+        // If the command is to mul
+        int d = (instr >> 11) & 0x1F;
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+
+        mips_mul_function_dashR(var, d, s, t);
+        
+    } else if (((instr >> 26) & 0x3F) == 4) {
+        // If the command is to beq
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+        int16_t i = instr & 0xFFFF;
+        
+        return mips_beq_function_dashR(var, pc, s, t, i);
+        
+    } else if (((instr >> 26) & 0x3F) == 5) {
+        // If the command is to bne
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+        int16_t i = instr & 0xFFFF;
+
+        return mips_bne_function_dashR(var, pc, s, t, i);
+
+    } else if (((instr >> 26) & 0x3F) == 8) {
+        // If the command is to addi
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+        int16_t i = instr & 0xFFFF;
+
+        mips_addi_function_dashR(var, t, s, i);
+
+    } else if (((instr >> 26) & 0x3F) == 0xD) {
+        // If the command is to ori
+        int s = (instr >> 21) & 0x1F;
+        int t = (instr >> 16) & 0x1F;
+        int16_t i = instr & 0xFFFF;
+
+        mips_ori_function_dashR(var, t, s, i);
+
+    } else if (((instr >> 21) & 0x1FF) == 0x1E0) {
+        // If the command is to ori
+        int t = (instr >> 16) & 0x1F;
+        int16_t i = instr & 0xFFFF;
+
+        mips_lui_function_dashR(var, t, i);
+    } else if (instr == 0b1100) {
+        // If the command is to syscall
+        syscall_function_dashR(var, exitPointer);
+    } else {
+        printf("invalid instruction code\n");
+        *exitPointer = 1;
+    }
+
+    return pc;
+}
+
+// All these functions print out the respective mips fns
+// and apply it to the var variables
+void mips_add_function_dashR(int *var, int d, int s, int t) {
+    var[d] = var[s] + var[t];
+}
+
+void mips_sub_function_dashR(int *var, int d, int s, int t) {
+    var[d] = var[s] - var[t];
+}
+
+void mips_slt_function_dashR(int *var, int d, int s, int t) {
+    var[d] = var[s] < var[t];
+}
+
+void mips_mul_function_dashR(int *var, int d, int s, int t) {
+    var[d] = var[s] * var[t];
+}
+
+int mips_beq_function_dashR(int *var, int pc, int s, int t, int16_t i) {
+    if (var[s] == var[t]) {
+        return pc + i - 1;
+    }
+
+    return pc;
+}
+
+int mips_bne_function_dashR(int *var, int pc, int s, int t, int16_t i) {
+    if (var[s] != var[t]) {
+        return pc + i - 1;
+    }
+
+    return pc;
+}
+
+void mips_addi_function_dashR(int *var, int t, int s, int16_t i) {
+    var[t] = var[s] + i;
+}
+
+void mips_ori_function_dashR(int *var, int t, int s, int16_t i) {
+    var[t] = var[s] | i;
+}
+
+void mips_lui_function_dashR(int *var, int t, int16_t i) {
+    var[t] = i << 16;
+}
+
+void syscall_function_dashR(int *var, int *exitPointer) {
+    if (var[2] == 1) {
+        printf("%d", var[4]);
+    } else if (var[2] == 10) {
+        *exitPointer = 1;
+    } else if (var[2] == 11) {
+        putchar(var[4]);
+    } else {
         printf("Unknown system call: %d\n", var[2]);
         *exitPointer = 1;
     }
