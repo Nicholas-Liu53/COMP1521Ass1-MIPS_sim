@@ -123,79 +123,50 @@ void execute_instructions(int n_instructions,
 //! NOTE: instr refers to instructions[n_instructions]
 //! except those names were too long
 int interpret_hex(uint32_t instr, int *var, int pc, int *exitPointer) {
+    int d = (instr >> 11) & 0x1F;
+    int s = (instr >> 21) & 0x1F;
+    int t = (instr >> 16) & 0x1F;
+    int16_t i = instr & 0xFFFF;
     if (!(instr >> 26) && ((instr & 0x7FF) == 0x20)) {
         // If the command is to add
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_add_function(var, d, s, t);
           
     } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x22)) {
         // If the command is to sub
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_sub_function(var, d, s, t);
         
     } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x2A)) {
         // If the command is to slt
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_slt_function(var, d, s, t);
         
     } else if (((instr >> 26) & 0x3F) == 0x1C && ((instr & 0x7FF) == 2)) {
         // If the command is to mul
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_mul_function(var, d, s, t);
         
     } else if (((instr >> 26) & 0x3F) == 4) {
         // If the command is to beq
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-        
         return mips_beq_function(var, pc, s, t, i);
         
     } else if (((instr >> 26) & 0x3F) == 5) {
         // If the command is to bne
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         return mips_bne_function(var, pc, s, t, i);
 
     } else if (((instr >> 26) & 0x3F) == 8) {
         // If the command is to addi
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_addi_function(var, t, s, i);
 
     } else if (((instr >> 26) & 0x3F) == 0xD) {
         // If the command is to ori
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_ori_function(var, t, s, i);
 
     } else if (((instr >> 21) & 0x1FF) == 0x1E0) {
         // If the command is to ori
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_lui_function(var, t, i);
+
     } else if (instr == 0b1100) {
         // If the command is to syscall
         syscall_function(var, exitPointer);
+        
     } else {
         printf("invalid instruction code\n");
         *exitPointer = 1;
@@ -274,19 +245,16 @@ void mips_lui_function(int *var, int t, int16_t i) {
 
 void syscall_function(int *var, int *exitPointer) {
     printf("syscall\n");
+    printf(">>> syscall %d\n", var[2]);
     if (var[2] == 1) {
-        printf(">>> syscall %d\n", var[2]);
         printf("<<< %d\n", var[4]);
     } else if (var[2] == 10) {
-        printf(">>> syscall %d\n", var[2]);
         *exitPointer = 1;
     } else if (var[2] == 11) {
-        printf(">>> syscall %d\n", var[2]);
         printf("<<< ");
         putchar(var[4]);
         printf("\n");
     } else {
-        printf(">>> syscall %d\n", var[2]);
         printf("Unknown system call: %d\n", var[2]);
         *exitPointer = 1;
     }
@@ -296,79 +264,50 @@ void syscall_function(int *var, int *exitPointer) {
 //* trace_mode is off
 
 int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer) {
+    int d = (instr >> 11) & 0x1F;
+    int s = (instr >> 21) & 0x1F;
+    int t = (instr >> 16) & 0x1F;
+    int16_t i = instr & 0xFFFF;
     if (!(instr >> 26) && ((instr & 0x7FF) == 0x20)) {
         // If the command is to add
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_add_function_dashR(var, d, s, t);
           
     } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x22)) {
         // If the command is to sub
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_sub_function_dashR(var, d, s, t);
         
     } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x2A)) {
         // If the command is to slt
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_slt_function_dashR(var, d, s, t);
         
     } else if (((instr >> 26) & 0x3F) == 0x1C && ((instr & 0x7FF) == 2)) {
         // If the command is to mul
-        int d = (instr >> 11) & 0x1F;
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-
         mips_mul_function_dashR(var, d, s, t);
         
     } else if (((instr >> 26) & 0x3F) == 4) {
         // If the command is to beq
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-        
         return mips_beq_function_dashR(var, pc, s, t, i);
         
     } else if (((instr >> 26) & 0x3F) == 5) {
         // If the command is to bne
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         return mips_bne_function_dashR(var, pc, s, t, i);
 
     } else if (((instr >> 26) & 0x3F) == 8) {
         // If the command is to addi
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_addi_function_dashR(var, t, s, i);
 
     } else if (((instr >> 26) & 0x3F) == 0xD) {
         // If the command is to ori
-        int s = (instr >> 21) & 0x1F;
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_ori_function_dashR(var, t, s, i);
 
     } else if (((instr >> 21) & 0x1FF) == 0x1E0) {
         // If the command is to ori
-        int t = (instr >> 16) & 0x1F;
-        int16_t i = instr & 0xFFFF;
-
         mips_lui_function_dashR(var, t, i);
+
     } else if (instr == 0b1100) {
         // If the command is to syscall
         syscall_function_dashR(var, exitPointer);
+
     } else {
         printf("invalid instruction code\n");
         *exitPointer = 1;
