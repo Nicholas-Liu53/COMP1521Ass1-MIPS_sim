@@ -99,9 +99,11 @@ void execute_instructions(int n_instructions,
         }
         if (pc < 0) {
             printf("Illegal branch to address before instructions: PC = %d\n", pc + 1);
+            free(var);
             return;
         }
         if (exit) {
+            free(var);
             return;
         }
         
