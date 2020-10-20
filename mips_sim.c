@@ -51,6 +51,17 @@ void mips_ori_function_dashR(int *var, int t, int s, int16_t i);
 void mips_lui_function_dashR(int *var, int t, int16_t i);
 void syscall_function_dashR(int *var, int *exitPointer);
 
+int hex_add_condition(int32_t hexCode);
+int hex_sub_condition(int32_t hexCode);
+int hex_slt_condition(int32_t hexCode);
+int hex_mul_condition(int32_t hexCode);
+int hex_beq_condition(int32_t hexCode);
+int hex_bne_condition(int32_t hexCode);
+int hex_addi_condition(int32_t hexCode);
+int hex_ori_condition(int32_t hexCode);
+int hex_lui_condition(int32_t hexCode);
+int hex_syscall_condition(int32_t hexCode);
+
 // YOU SHOULD NOT NEED TO CHANGE MAIN
 
 int main(int argc, char *argv[]) {
@@ -78,8 +89,7 @@ int main(int argc, char *argv[]) {
 void execute_instructions(int n_instructions,
                           uint32_t instructions[n_instructions],
                           int trace_mode) {
-    // REPLACE CODE BELOW WITH YOUR CODE
-
+    // Start at branch 0
     int pc = 0;
 
     // Register numbers act as indexes to var array pointer
@@ -90,29 +100,38 @@ void execute_instructions(int n_instructions,
     int exit = 0;
     int *exitPointer = &exit;
 
+    // Loop through the branches until you exhaust out of instructions
     while (pc < n_instructions) {
         if (trace_mode) {
+            // If trace mode is on
             printf("%d: 0x%08X ", pc, instructions[pc]);
             pc = interpret_hex(instructions[pc], var, pc, exitPointer);
         } else {
+            // If trace mode is off
             pc = interpret_hex_dashR(instructions[pc], var, pc, exitPointer);
         }
-        if (pc < 0) {
-            printf("Illegal branch to address before instructions: PC = %d\n", pc + 1);
+        if (pc < -1) {
+            // If pc becomes negative (i.e. illegal branching)
+            //* pc can be -1 because the interpret_hex functions
+            //* returns one less the value of the new branch
+            //* if the branch changes (i.e branch 0 is a valid branch)
+            printf(
+                "Illegal branch to address before instructions: PC = %d\n", 
+                                                                   pc + 1
+            );
             free(var);
             return;
         }
         if (exit) {
+            // If exit == 1, then end program
             free(var);
             return;
         }
         
         var[0] = 0; // $0 is hard-wired to 0
-        pc++;
+        pc++;       // onto the next branch !!
     }
 }
-
-
 
 // ADD YOUR FUNCTIONS HERE
 
@@ -121,53 +140,61 @@ void execute_instructions(int n_instructions,
 
 // Function to interpret the hex command
 //! NOTE: instr refers to instructions[n_instructions]
-//! except those names were too long
+// This function returns one less of the value of the new pc
+// if the branch changes
+// Otherwise it returns the current pc
 int interpret_hex(uint32_t instr, int *var, int pc, int *exitPointer) {
+    // First identify the d, s, t and I variables
+    //! Note: On the spec it's 'I' but I typed it in
+    //! lower-case 'i' as CAPS should be reserved 
+    //! for #defines
     int d = (instr >> 11) & 0x1F;
     int s = (instr >> 21) & 0x1F;
     int t = (instr >> 16) & 0x1F;
     int16_t i = instr & 0xFFFF;
-    if (!(instr >> 26) && ((instr & 0x7FF) == 0x20)) {
+    if (hex_add_condition(instr)) {
         // If the command is to add
         mips_add_function(var, d, s, t);
           
-    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x22)) {
+    } else if (hex_sub_condition(instr)) {
         // If the command is to sub
         mips_sub_function(var, d, s, t);
         
-    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x2A)) {
+    } else if (hex_slt_condition(instr)) {
         // If the command is to slt
         mips_slt_function(var, d, s, t);
         
-    } else if (((instr >> 26) & 0x3F) == 0x1C && ((instr & 0x7FF) == 2)) {
+    } else if (hex_mul_condition(instr)) {
         // If the command is to mul
         mips_mul_function(var, d, s, t);
         
-    } else if (((instr >> 26) & 0x3F) == 4) {
+    } else if (hex_beq_condition(instr)) {
         // If the command is to beq
         return mips_beq_function(var, pc, s, t, i);
         
-    } else if (((instr >> 26) & 0x3F) == 5) {
+    } else if (hex_bne_condition(instr)) {
         // If the command is to bne
         return mips_bne_function(var, pc, s, t, i);
 
-    } else if (((instr >> 26) & 0x3F) == 8) {
+    } else if (hex_addi_condition(instr)) {
         // If the command is to addi
         mips_addi_function(var, t, s, i);
 
-    } else if (((instr >> 26) & 0x3F) == 0xD) {
+    } else if (hex_ori_condition(instr)) {
         // If the command is to ori
         mips_ori_function(var, t, s, i);
 
-    } else if (((instr >> 21) & 0x1FF) == 0x1E0) {
+    } else if (hex_lui_condition(instr)) {
         // If the command is to ori
         mips_lui_function(var, t, i);
 
-    } else if (instr == 0b1100) {
+    } else if (hex_syscall_condition(instr)) {
         // If the command is to syscall
         syscall_function(var, exitPointer);
         
     } else {
+        // If the command is none of the above
+        // i.e. invalid command
         printf("invalid instruction code\n");
         *exitPointer = 1;
     }
@@ -263,52 +290,63 @@ void syscall_function(int *var, int *exitPointer) {
 //* This next set of functions are specifically when
 //* trace_mode is off
 
+// Function to interpret the hex command
+//! NOTE: instr refers to instructions[n_instructions]
+// This function returns one less of the value of the new pc
+// if the branch changes
+// Otherwise it returns the current pc
 int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer) {
+    // First identify the d, s, t and I variables
+    //! Note: On the spec it's 'I' but I typed it in
+    //! lower-case 'i' as CAPS should be reserved 
+    //! for #defines
     int d = (instr >> 11) & 0x1F;
     int s = (instr >> 21) & 0x1F;
     int t = (instr >> 16) & 0x1F;
     int16_t i = instr & 0xFFFF;
-    if (!(instr >> 26) && ((instr & 0x7FF) == 0x20)) {
+    if (hex_add_condition(instr)) {
         // If the command is to add
         mips_add_function_dashR(var, d, s, t);
           
-    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x22)) {
+    } else if (hex_sub_condition(instr)) {
         // If the command is to sub
         mips_sub_function_dashR(var, d, s, t);
         
-    } else if (!(instr >> 26) && ((instr & 0x7FF) == 0x2A)) {
+    } else if (hex_slt_condition(instr)) {
         // If the command is to slt
         mips_slt_function_dashR(var, d, s, t);
         
-    } else if (((instr >> 26) & 0x3F) == 0x1C && ((instr & 0x7FF) == 2)) {
+    } else if (hex_mul_condition(instr)) {
         // If the command is to mul
         mips_mul_function_dashR(var, d, s, t);
         
-    } else if (((instr >> 26) & 0x3F) == 4) {
+    } else if (hex_beq_condition(instr)) {
         // If the command is to beq
         return mips_beq_function_dashR(var, pc, s, t, i);
         
-    } else if (((instr >> 26) & 0x3F) == 5) {
+    } else if (hex_bne_condition(instr)) {
         // If the command is to bne
         return mips_bne_function_dashR(var, pc, s, t, i);
 
-    } else if (((instr >> 26) & 0x3F) == 8) {
+    } else if (hex_addi_condition(instr)) {
         // If the command is to addi
         mips_addi_function_dashR(var, t, s, i);
 
-    } else if (((instr >> 26) & 0x3F) == 0xD) {
+    } else if (hex_ori_condition(instr)) {
         // If the command is to ori
         mips_ori_function_dashR(var, t, s, i);
 
-    } else if (((instr >> 21) & 0x1FF) == 0x1E0) {
+    } else if (hex_lui_condition(instr)) {
         // If the command is to ori
         mips_lui_function_dashR(var, t, i);
 
-    } else if (instr == 0b1100) {
+    } else if (hex_syscall_condition(instr)) {
         // If the command is to syscall
         syscall_function_dashR(var, exitPointer);
 
     } else {
+        // If the command is none of the above
+        // i.e. invalid command
         printf("invalid instruction code\n");
         *exitPointer = 1;
     }
@@ -316,8 +354,8 @@ int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer) {
     return pc;
 }
 
-// All these functions print out the respective mips fns
-// and apply it to the var variables
+// All these functions apply respective mips fns
+// to the var variables
 void mips_add_function_dashR(int *var, int d, int s, int t) {
     var[d] = var[s] + var[t];
 }
@@ -373,6 +411,50 @@ void syscall_function_dashR(int *var, int *exitPointer) {
         printf("Unknown system call: %d\n", var[2]);
         *exitPointer = 1;
     }
+}
+
+//* This last set of functions return 1 if the condition is true,
+//* or 0 if the condition is false.
+//* These conditions represent what hex command is being called
+
+int hex_add_condition(int32_t hexCode) {
+    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x20);
+}
+
+int hex_sub_condition(int32_t hexCode) {
+    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x22);
+}
+
+int hex_slt_condition(int32_t hexCode) {
+    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x2A);
+}
+
+int hex_mul_condition(int32_t hexCode) {
+    return ((hexCode >> 26) & 0x3F) == 0x1C && ((hexCode & 0x7FF) == 2);
+}
+
+int hex_beq_condition(int32_t hexCode) {
+    return ((hexCode >> 26) & 0x3F) == 4;
+}
+
+int hex_bne_condition(int32_t hexCode) {
+    return ((hexCode >> 26) & 0x3F) == 5;
+}
+
+int hex_addi_condition(int32_t hexCode) {
+    return ((hexCode >> 26) & 0x3F) == 8;
+}
+
+int hex_ori_condition(int32_t hexCode) {
+    return ((hexCode >> 26) & 0x3F) == 0xD;
+}
+
+int hex_lui_condition(int32_t hexCode) {
+    return ((hexCode >> 21) & 0x1FF) == 0x1E0;
+}
+
+int hex_syscall_condition(int32_t hexCode) {
+    return hexCode == 0b1100;
 }
 
 // YOU DO NOT NEED TO CHANGE CODE BELOW HERE
