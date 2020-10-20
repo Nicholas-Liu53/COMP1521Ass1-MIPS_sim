@@ -94,7 +94,7 @@ void execute_instructions(int n_instructions,
 
     // Register numbers act as indexes to var array pointer
     int *var = malloc(32 * sizeof(int));
-    var[0] = 0; // $0 is hard-wired to 0
+    var[0] = 0;       // $0 is hard-wired to 0
 
     // Program ends when exit == 1
     int exit = 0;
@@ -119,8 +119,7 @@ void execute_instructions(int n_instructions,
                 "Illegal branch to address before instructions: PC = %d\n", 
                                                                    pc + 1
             );
-            free(var);
-            return;
+            exit = 1; // thus program is to exit 
         }
         if (exit) {
             // If exit == 1, then end program
@@ -128,8 +127,8 @@ void execute_instructions(int n_instructions,
             return;
         }
         
-        var[0] = 0; // $0 is hard-wired to 0
-        pc++;       // onto the next branch !!
+        var[0] = 0;   // $0 is hard-wired to 0
+        pc++;         // onto the next branch !!
     }
 }
 
