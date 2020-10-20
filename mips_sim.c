@@ -2,7 +2,7 @@
 // starting point code v0.1 - 13/10/20
 
 
-// Written by Nicholas Liu (z5310207) 19th Oct ~ 
+// Written by Nicholas Liu (z5310207) 19th Oct ~ 20th Oct
 
 
 #include <stdio.h>
@@ -10,6 +10,11 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+
+// ADD YOUR #includes HERE
+#include "hex_conditions.h"
+#include "mips_functions_with_trace.h"
+#include "mips_functions_no_trace.h"
 
 #define MAX_LINE_LENGTH 256
 #define INSTRUCTIONS_GROW 64
@@ -28,39 +33,8 @@ uint32_t *instructions_realloc(uint32_t *instructions, int n_instructions);
 
 // ADD YOUR FUNCTION PROTOTYPES HERE
 int interpret_hex(uint32_t instr, int *var, int pc, int *exitPointer);
-void mips_add_function(int *var, int d, int s, int t);
-void mips_sub_function(int *var, int d, int s, int t);
-void mips_slt_function(int *var, int d, int s, int t);
-void mips_mul_function(int *var, int d, int s, int t);
-int mips_beq_function(int *var, int pc, int s, int t, int16_t i);
-int mips_bne_function(int *var, int pc, int s, int t, int16_t i);
-void mips_addi_function(int *var, int t, int s, int16_t i);
-void mips_ori_function(int *var, int t, int s, int16_t i);
-void mips_lui_function(int *var, int t, int16_t i);
-void syscall_function(int *var, int *exitPointer);
-
 int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer);
-void mips_add_function_dashR(int *var, int d, int s, int t);
-void mips_sub_function_dashR(int *var, int d, int s, int t);
-void mips_slt_function_dashR(int *var, int d, int s, int t);
-void mips_mul_function_dashR(int *var, int d, int s, int t);
-int mips_beq_function_dashR(int *var, int pc, int s, int t, int16_t i);
-int mips_bne_function_dashR(int *var, int pc, int s, int t, int16_t i);
-void mips_addi_function_dashR(int *var, int t, int s, int16_t i);
-void mips_ori_function_dashR(int *var, int t, int s, int16_t i);
-void mips_lui_function_dashR(int *var, int t, int16_t i);
-void syscall_function_dashR(int *var, int *exitPointer);
 
-int hex_add_condition(int32_t hexCode);
-int hex_sub_condition(int32_t hexCode);
-int hex_slt_condition(int32_t hexCode);
-int hex_mul_condition(int32_t hexCode);
-int hex_beq_condition(int32_t hexCode);
-int hex_bne_condition(int32_t hexCode);
-int hex_addi_condition(int32_t hexCode);
-int hex_ori_condition(int32_t hexCode);
-int hex_lui_condition(int32_t hexCode);
-int hex_syscall_condition(int32_t hexCode);
 
 // YOU SHOULD NOT NEED TO CHANGE MAIN
 
@@ -134,8 +108,8 @@ void execute_instructions(int n_instructions,
 
 // ADD YOUR FUNCTIONS HERE
 
-//* This first set of functions are specifically when
-//* trace_mode is on
+//* This first functions is specifically for
+//* when trace_mode is on
 
 // Function to interpret the hex command
 //! NOTE: instr refers to instructions[n_instructions]
@@ -201,93 +175,8 @@ int interpret_hex(uint32_t instr, int *var, int pc, int *exitPointer) {
     return pc;
 }
 
-// All these functions print out the respective mips fns
-// and apply it to the var variables
-void mips_add_function(int *var, int d, int s, int t) {
-    printf("add  $%d, $%d, $%d\n", d, s, t);
-    var[d] = var[s] + var[t];
-    printf(">>> $%d = %d\n", d, var[d]);
-}
-
-void mips_sub_function(int *var, int d, int s, int t) {
-    printf("sub  $%d, $%d, $%d\n", d, s, t);
-    var[d] = var[s] - var[t];
-    printf(">>> $%d = %d\n", d, var[d]);
-}
-
-void mips_slt_function(int *var, int d, int s, int t) {
-    printf("slt  $%d, $%d, $%d\n", d, s, t);
-    var[d] = var[s] < var[t];
-    printf(">>> $%d = %d\n", d, var[d]);
-}
-
-void mips_mul_function(int *var, int d, int s, int t) {
-    printf("mul  $%d, $%d, $%d\n", d, s, t);
-    var[d] = var[s] * var[t];
-    printf(">>> $%d = %d\n", d, var[d]);
-}
-
-int mips_beq_function(int *var, int pc, int s, int t, int16_t i) {
-    printf("beq  $%d, $%d, %d\n", s, t, i);
-    if (var[s] == var[t]) {
-        printf(">>> branch taken to PC = %d\n", pc + i);
-        return pc + i - 1;
-    } else {
-        printf(">>> branch not taken\n");
-    }
-
-    return pc;
-}
-
-int mips_bne_function(int *var, int pc, int s, int t, int16_t i) {
-    printf("bne  $%d, $%d, %d\n", s, t, i);
-    if (var[s] != var[t]) {
-        printf(">>> branch taken to PC = %d\n", pc + i);
-        return pc + i - 1;
-    } else {
-        printf(">>> branch not taken\n");
-    }
-
-    return pc;
-}
-
-void mips_addi_function(int *var, int t, int s, int16_t i) {
-    printf("addi $%d, $%d, %d\n", t, s, i);
-    var[t] = var[s] + i;
-    printf(">>> $%d = %d\n", t, var[t]);
-}
-
-void mips_ori_function(int *var, int t, int s, int16_t i) {
-    printf("ori  $%d, $%d, %d\n", t, s, i);
-    var[t] = var[s] | i;
-    printf(">>> $%d = %d\n", t, var[t]);
-}
-
-void mips_lui_function(int *var, int t, int16_t i) {
-    printf("lui  $%d, %d\n", t, i);
-    var[t] = i << 16;
-    printf(">>> $%d = %d\n", t, var[t]);
-}
-
-void syscall_function(int *var, int *exitPointer) {
-    printf("syscall\n");
-    printf(">>> syscall %d\n", var[2]);
-    if (var[2] == 1) {
-        printf("<<< %d\n", var[4]);
-    } else if (var[2] == 10) {
-        *exitPointer = 1;
-    } else if (var[2] == 11) {
-        printf("<<< ");
-        putchar(var[4]);
-        printf("\n");
-    } else {
-        printf("Unknown system call: %d\n", var[2]);
-        *exitPointer = 1;
-    }
-}
-
-//* This next set of functions are specifically when
-//* trace_mode is off
+//* This next function is specifically for
+//* when trace_mode is off
 
 // Function to interpret the hex command
 //! NOTE: instr refers to instructions[n_instructions]
@@ -351,109 +240,6 @@ int interpret_hex_dashR(uint32_t instr, int *var, int pc, int *exitPointer) {
     }
 
     return pc;
-}
-
-// All these functions apply respective mips fns
-// to the var variables
-void mips_add_function_dashR(int *var, int d, int s, int t) {
-    var[d] = var[s] + var[t];
-}
-
-void mips_sub_function_dashR(int *var, int d, int s, int t) {
-    var[d] = var[s] - var[t];
-}
-
-void mips_slt_function_dashR(int *var, int d, int s, int t) {
-    var[d] = var[s] < var[t];
-}
-
-void mips_mul_function_dashR(int *var, int d, int s, int t) {
-    var[d] = var[s] * var[t];
-}
-
-int mips_beq_function_dashR(int *var, int pc, int s, int t, int16_t i) {
-    if (var[s] == var[t]) {
-        return pc + i - 1;
-    }
-
-    return pc;
-}
-
-int mips_bne_function_dashR(int *var, int pc, int s, int t, int16_t i) {
-    if (var[s] != var[t]) {
-        return pc + i - 1;
-    }
-
-    return pc;
-}
-
-void mips_addi_function_dashR(int *var, int t, int s, int16_t i) {
-    var[t] = var[s] + i;
-}
-
-void mips_ori_function_dashR(int *var, int t, int s, int16_t i) {
-    var[t] = var[s] | i;
-}
-
-void mips_lui_function_dashR(int *var, int t, int16_t i) {
-    var[t] = i << 16;
-}
-
-void syscall_function_dashR(int *var, int *exitPointer) {
-    if (var[2] == 1) {
-        printf("%d", var[4]);
-    } else if (var[2] == 10) {
-        *exitPointer = 1;
-    } else if (var[2] == 11) {
-        putchar(var[4]);
-    } else {
-        printf("Unknown system call: %d\n", var[2]);
-        *exitPointer = 1;
-    }
-}
-
-//* This last set of functions return 1 if the condition is true,
-//* or 0 if the condition is false.
-//* These conditions represent what hex command is being called
-
-int hex_add_condition(int32_t hexCode) {
-    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x20);
-}
-
-int hex_sub_condition(int32_t hexCode) {
-    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x22);
-}
-
-int hex_slt_condition(int32_t hexCode) {
-    return !(hexCode >> 26) && ((hexCode & 0x7FF) == 0x2A);
-}
-
-int hex_mul_condition(int32_t hexCode) {
-    return ((hexCode >> 26) & 0x3F) == 0x1C && ((hexCode & 0x7FF) == 2);
-}
-
-int hex_beq_condition(int32_t hexCode) {
-    return ((hexCode >> 26) & 0x3F) == 4;
-}
-
-int hex_bne_condition(int32_t hexCode) {
-    return ((hexCode >> 26) & 0x3F) == 5;
-}
-
-int hex_addi_condition(int32_t hexCode) {
-    return ((hexCode >> 26) & 0x3F) == 8;
-}
-
-int hex_ori_condition(int32_t hexCode) {
-    return ((hexCode >> 26) & 0x3F) == 0xD;
-}
-
-int hex_lui_condition(int32_t hexCode) {
-    return ((hexCode >> 21) & 0x1FF) == 0x1E0;
-}
-
-int hex_syscall_condition(int32_t hexCode) {
-    return hexCode == 0b1100;
 }
 
 // YOU DO NOT NEED TO CHANGE CODE BELOW HERE
